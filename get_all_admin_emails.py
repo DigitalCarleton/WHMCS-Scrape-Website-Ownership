@@ -1,5 +1,4 @@
 import sys
-import config
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -26,7 +25,8 @@ def get_admin_emails_from_cpanel(driver, emails_dict):
     if (num_apps == '0'):
         return []
 
-    wrench_links = driver.find_elements(By.CSS_SELECTOR, "a[data-descr='View/edit details']")
+    wrench_links = driver.find_elements(By.XPATH, "//a[.//div[contains(@class, 'i_icon_edit') and contains(., 'Edit')]]")
+    # wrench_links = driver.find_elements(By.CSS_SELECTOR, "a[data-descr='View/edit details']")
 
     apps_tab = driver.window_handles[-1]
     
@@ -38,12 +38,20 @@ def get_admin_emails_from_cpanel(driver, emails_dict):
         open_link_in_new_tab(driver, link.get_attribute('href'))
 
         try:
+            settings_button = driver.find_element(By.XPATH, "//a[contains(@href, '/settings') and normalize-space()='Settings']")
+            settings_button.click()
+            
+            website_url = driver.find_element(By.ID, 'field_url').find_element(By.TAG_NAME, 'option').text
+
+            application_button = driver.find_element(By.XPATH, "//a[.//div[normalize-space()='Application']]")
+            application_button.click()
+
             admin_email = driver.find_element(By.ID, 'field_email').get_attribute('value')
 
-            advanced_tab = driver.find_element(By.ID, 'i_app_subtabs_2')
-            advanced_tab.click()
+            # advanced_tab = driver.find_element(By.ID, 'i_app_subtabs_2')
+            # advanced_tab.click()
 
-            website_url = driver.find_element(By.ID, 'field_url').find_element(By.TAG_NAME, 'option').text
+            # website_url = driver.find_element(By.ID, 'field_url').find_element(By.TAG_NAME, 'option').text
 
             add_email_and_website_to_dict(emails_dict, admin_email, website_url[7:])
         except:
@@ -69,10 +77,21 @@ def init_driver():
     driver.implicitly_wait(WAIT_TIME)
     return driver
 
+def get_credentials():
+    # Get the username and password
+    try:
+        user = open("credentials.txt", "r", encoding="UTF-8").readlines()
+        username = user[0].strip('\n')
+        password = user[1]
+    except FileNotFoundError:
+        username = input("Enter your username: ")
+        password = input("Enter your password: ")
+    return (username, password)
 
-def login_to_WHMCS(driver):
-    driver.find_element(By.NAME, 'username').send_keys(config.username)
-    driver.find_element(By.NAME,'password').send_keys(config.password)
+
+def login_to_WHMCS(driver, username, password):
+    driver.find_element(By.NAME, 'username').send_keys(username)
+    driver.find_element(By.NAME,'password').send_keys(password)
     driver.find_element(By.CSS_SELECTOR,'input[value=Login]').click()
 
 
@@ -82,7 +101,7 @@ def open_link_in_new_tab(driver, href):
 
 
 def login_to_cpanel(driver):
-    login_button = driver.find_element(By.XPATH, '//button[normalize-space()="Login to cPanel"]')
+    login_button = driver.find_element(By.XPATH, "//button[contains(@onclick, 'singlesignon')]")
     login_button.click()
 
     WebDriverWait(driver, WAIT_TIME).until(expected_conditions.new_window_is_opened(driver.window_handles))
@@ -142,9 +161,12 @@ def main():
     if (len(sys.argv) == 2):
         start_domain_id = sys.argv[2]
 
+    
+    username, password = get_credentials()
+
     driver = init_driver()
 
-    login_to_WHMCS(driver)
+    login_to_WHMCS(driver, username, password)
 
     products_and_services_page_href = driver.find_element(By.ID, 'Menu-Clients-Products_Services').get_attribute('href')
     driver.get(products_and_services_page_href)
@@ -174,6 +196,8 @@ def main():
             if (len(apps_with_errors) > 0):
                 append_errors_to_file(current_domain_id, apps_with_errors, ERRORS_FILE)
 
+            print("logging emails: ")
+            print(emails_dict)
             write_emails_to_file(emails_dict, EMAILS_FILE)
 
             close_all_tabs_except(driver, tab_index=0)
