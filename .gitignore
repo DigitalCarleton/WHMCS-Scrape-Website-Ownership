@@ -6,8 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
-# User/Password file
+# User generated files
 config.py
+out/errors.txt
+out/admin_emails.csv
+
 
 # Distribution / packaging
 .Python

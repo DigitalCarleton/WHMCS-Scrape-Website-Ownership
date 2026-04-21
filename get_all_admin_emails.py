@@ -159,7 +159,7 @@ def main():
 
     # See if user wants to start at a particular domain
     if (len(sys.argv) == 2):
-        start_domain_id = sys.argv[2]
+        start_domain_id = int(sys.argv[1])
 
     
     username, password = get_credentials()
@@ -195,9 +195,7 @@ def main():
 
             if (len(apps_with_errors) > 0):
                 append_errors_to_file(current_domain_id, apps_with_errors, ERRORS_FILE)
-
-            print("logging emails: ")
-            print(emails_dict)
+                
             write_emails_to_file(emails_dict, EMAILS_FILE)
 
             close_all_tabs_except(driver, tab_index=0)
