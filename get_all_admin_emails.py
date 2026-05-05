@@ -26,9 +26,8 @@ def get_admin_emails_from_cpanel(driver, emails_dict):
         return []
 
     wrench_links = driver.find_elements(By.XPATH, "//a[.//div[contains(@class, 'i_icon_edit') and contains(., 'Edit')]]")
-    # wrench_links = driver.find_elements(By.CSS_SELECTOR, "a[data-descr='View/edit details']")
 
-    apps_tab = driver.window_handles[-1]
+    apps_tab = driver.current_window_handle
     
     erroneous_apps = []
     app_count = 1
@@ -47,11 +46,6 @@ def get_admin_emails_from_cpanel(driver, emails_dict):
             application_button.click()
 
             admin_email = driver.find_element(By.ID, 'field_email').get_attribute('value')
-
-            # advanced_tab = driver.find_element(By.ID, 'i_app_subtabs_2')
-            # advanced_tab.click()
-
-            # website_url = driver.find_element(By.ID, 'field_url').find_element(By.TAG_NAME, 'option').text
 
             add_email_and_website_to_dict(emails_dict, admin_email, website_url[7:])
         except:
@@ -175,19 +169,25 @@ def main():
 
     for i in range(100): # I've set 100 as a safety number in case the loop doesn't stop for some reason
 
-        all_domain_rows = driver.find_element(By.ID, "sortabletbl0").find_elements(By.CSS_SELECTOR, "tr")[1:]
+        WebDriverWait(driver, WAIT_TIME).until(
+            expected_conditions.presence_of_element_located((By.ID, "sortabletbl0"))
+        )
+                
+        rows = driver.find_element(By.ID, "sortabletbl0").find_elements(By.CSS_SELECTOR, "tr")[1:]
 
-        for domain_row in all_domain_rows:
-
-            domain_id_link = domain_row.find_element(By.CSS_SELECTOR, "a")
-            current_domain_id = domain_id_link.text
+        domains = []
+        for row in rows:
+            link = row.find_element(By.CSS_SELECTOR, "a")
+            domains.append((link.text, link.get_attribute('href')))
+        
+        for current_domain_id, href in domains:
 
             if (int(current_domain_id) > start_domain_id):
                 continue
 
             print('Checking domain ' + current_domain_id)
 
-            open_link_in_new_tab(driver, domain_id_link.get_attribute('href'))
+            open_link_in_new_tab(driver, href)
 
             login_to_cpanel(driver)
 
